@@ -1,0 +1,15 @@
+{
+    "name": "public-var/game-minions",
+    "description": "An examples of a game with PHP Classes",
+    "authors": [
+        {
+            "name": "PublicVar",
+            "email": "dev.publicvar@gmail.com"
+        }
+    ],
+    "autoload":{
+        "psr-4":{
+            "PublicVar\\":"src/"
+        }
+    }
+}
