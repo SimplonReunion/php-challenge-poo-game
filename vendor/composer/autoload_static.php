@@ -7,6 +7,10 @@ namespace Composer\Autoload;
 class ComposerStaticInit9751d00bb278730d1a62eaa71c413d0c
 {
     public static $prefixLengthsPsr4 = array (
+        'S' => 
+        array (
+            'Symfony\\Component\\EventDispatcher\\' => 34,
+        ),
         'P' => 
         array (
             'PublicVar\\' => 10,
@@ -14,6 +18,10 @@ class ComposerStaticInit9751d00bb278730d1a62eaa71c413d0c
     );
 
     public static $prefixDirsPsr4 = array (
+        'Symfony\\Component\\EventDispatcher\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/symfony/event-dispatcher',
+        ),
         'PublicVar\\' => 
         array (
             0 => __DIR__ . '/../..' . '/src',

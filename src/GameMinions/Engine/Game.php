@@ -6,6 +6,15 @@ use PublicVar\GameMinions\Character\Chef;
 use PublicVar\GameMinions\Character\Hero;
 use PublicVar\GameMinions\Character\Lieutenant;
 use PublicVar\GameMinions\Character\Minions;
+use PublicVar\GameMinions\Event\BaseGameEvent;
+use PublicVar\GameMinions\Event\EndGameEvent;
+use PublicVar\GameMinions\Event\EndRoundEvent;
+use PublicVar\GameMinions\Event\GameEvents;
+use PublicVar\GameMinions\Event\HeroArmorIncreasedEvent;
+use PublicVar\GameMinions\Event\HeroLifeIncreasedEvent;
+use PublicVar\GameMinions\Event\StartGameEvent;
+use PublicVar\GameMinions\Event\StartRoundEvent;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Description of Game
@@ -16,14 +25,16 @@ class Game
 {
 
     private $hero;
-    private $enemy;
+    private $enemies;
     private $numberOfRound;
+    private $eventDispatcher;
 
     const WAIT_TIME = 2;
 
-    public function __construct()
+    public function __construct(EventDispatcherInterface $eventDispatcher = null)
     {
         $this->numberOfRound = 1;
+        $this->eventDispatcher = $eventDispatcher;
     }
 
     /**
@@ -31,36 +42,19 @@ class Game
      */
     public function start()
     {
+        $this->dispatchStartGame();
         for ($i = 0; $i < $this->numberOfRound; $i++) {
-
+            
+            $this->dispatchStartRound($i+1);
+            
             if ($this->isHeroAlive()) {
                 $this->randomHeroBonusLife();
                 $this->randomHeroBonusArmor();
                 
-                //c'est moche mais c'est pour voir.
-                echo "round Number : " . ($i + 1);
-                echo "<br>\n";
-                echo "before the round : ";
-                echo "<br>\n";
-                
-                $this
-                    ->displayHeroLife()
-                    ->displayHeroArmor()
-                ;
 
                 $this->roundGame();
 
-
-                echo "after the round : ";
-                echo "<br>\n";
-
-                $this
-                    ->displayHeroLife()
-                    ->displayHeroArmor()
-                ;
-
-                echo "<br>\n";
-                echo "<br>\n";
+                $this->dispatchEndRound($i+1);
             }
             else {
                 break;
@@ -99,26 +93,12 @@ class Game
         return $this->hero->getLife() > 0;
     }
 
-    private function displayHeroLife()
-    {
-        echo "hero life : " . $this->hero->getLife();
-        echo "<br>\n";
-        return $this;
-    }
-
-    private function displayHeroArmor()
-    {
-        echo "hero armor : " . $this->hero->getArmor();
-        echo "<br>\n";
-        return $this;
-    }
-
     /**
      * Stop a game
      */
     public function stop()
     {
-        echo "Fin !";
+        $this->dispatchEndGame();
     }
 
     /**
@@ -127,12 +107,12 @@ class Game
     public function roundGame()
     {
         //The hero attack the enemies
-        foreach ($this->enemy as $enemy) {
+        foreach ($this->enemies as $enemy) {
             $this->hero->attack($enemy);
         }
 
         //The enemies attack the hero
-        foreach ($this->enemy as $enemy) {
+        foreach ($this->enemies as $enemy) {
             $enemy->attack($this->hero);
         }
     }
@@ -166,7 +146,7 @@ class Game
      */
     public function generateMinion()
     {
-        $this->enemy[] = Minions::create(20, 10);
+        $this->enemies[] = Minions::create(20, 10);
 
         return $this;
     }
@@ -177,7 +157,7 @@ class Game
      */
     public function generateLieutenant()
     {
-        $this->enemy[] = Lieutenant::create(40, 30);
+        $this->enemies[] = Lieutenant::create(40, 30);
 
         return $this;
     }
@@ -188,7 +168,7 @@ class Game
      */
     public function generateChef()
     {
-        $this->enemy[] = Chef::create(60, 100);
+        $this->enemies[] = Chef::create(60, 100);
 
         return $this;
     }
@@ -209,32 +189,32 @@ class Game
                  * héros récupère un bonus de vie (afficher la vie avant le 
                  * bonus puis après)
                  */
-                echo "life Hero : " . $this->hero->getLife();
-                echo "<br />\n";
+                $this->dispatchStartGame();
                 $this->hero->increaseLife(50);
-                echo "life Hero : " . $this->hero->getLife();
+                $this->dispatchHeroLifeIncreased();
                 break;
             case 2:
                 /**
                  * Le héros récupère un bonus d'armure (afficher la quantité 
                  * d'armure avant puis après)
                  */
-                echo "armor Hero : " . $this->hero->getArmor();
-                echo "<br />\n";
+                $this->dispatchStartGame();
                 $this->hero->increaseArmor(20);
-                echo "armor Hero : " . $this->hero->getArmor();
+                $this->dispatchHeroArmorIncreased();
                 break;
             case 3:
                 /**
                  * Le héros se fait un attaquer par un minion(afficher la vie 
                  * avant l'attaque puis après)
                  */
+                $this->dispatchStartGame();
+                $this->dispatchStartRound(1);
+                
                 $this->generateMinion();
-                echo "life Hero : " . $this->hero->getLife();
-                echo "<br />\n";
-                $this->enemy[0]->attack($this->hero);
-                echo "life Hero : " . $this->hero->getLife();
-                echo "<br />\n";
+                $this->enemies[0]->attack($this->hero);
+                
+                $this->dispatchEndRound(1);
+                $this->dispatchEndGame();
                 break;
 
             case 4:
@@ -242,19 +222,17 @@ class Game
                  * Le héros récupère de l'armure puis se fait attaquer par un 
                  * lieutenant minion (afficher la vie avant l'attaque puis après)
                  */
-                $this->generateLieutenant();
-                echo "life Hero : " . $this->hero->getLife();
-                echo "<br />\n";
+                
                 $this->hero->increaseArmor(20);
-                echo "life Armor : " . $this->hero->getArmor();
-                echo "<br />\n";
-                $this->enemy[0]->attack($this->hero);
-                echo "Lieutenant attack hero";
-                echo "<br />\n";
-                echo "life Hero : " . $this->hero->getLife();
-                echo "<br />\n";
-                echo "life Armor : " . $this->hero->getArmor();
-                echo "<br />\n";
+                
+                $this->dispatchStartGame();
+                $this->dispatchStartRound(1);
+                
+                $this->generateLieutenant();
+                $this->enemies[0]->attack($this->hero);
+                
+                $this->dispatchEndRound(1);
+                $this->dispatchEndGame();
                 break;
             case 5:
                 /**
@@ -272,6 +250,48 @@ class Game
 
         }
         echo "<hr>";
+    }
+    
+    private function dispatchStartGame()
+    {
+        if($this->eventDispatcher){
+            $this->eventDispatcher->dispatch(GameEvents::START_GAME, new StartGameEvent($this->hero, $this->enemies));
+        }
+    }
+    
+    private function dispatchEndGame()
+    {
+        if($this->eventDispatcher){
+            $this->eventDispatcher->dispatch(GameEvents::END_GAME, new EndGameEvent($this->hero, $this->enemies));
+        }
+    }
+    
+    private function dispatchStartRound($roundNumber)
+    {
+       if($this->eventDispatcher){
+            $this->eventDispatcher->dispatch(GameEvents::START_ROUND, new StartRoundEvent($this->hero, $this->enemies,$roundNumber));
+        } 
+    }
+    
+    private function dispatchEndRound($roundNumber)
+    {
+       if($this->eventDispatcher){
+            $this->eventDispatcher->dispatch(GameEvents::END_ROUND, new EndRoundEvent($this->hero, $this->enemies,$roundNumber));
+        } 
+    }
+    
+    private function dispatchHeroLifeIncreased()
+    {
+        if($this->eventDispatcher){
+            $this->eventDispatcher->dispatch(GameEvents::HERO_LIFE_INCREASED, new HeroLifeIncreasedEvent($this->hero));
+        }
+    }
+    
+    private function dispatchHeroArmorIncreased()
+    {
+        if($this->eventDispatcher){
+            $this->eventDispatcher->dispatch(GameEvents::HERO_ARMOR_INCREASED, new HeroArmorIncreasedEvent($this->hero));
+        }
     }
 
 }

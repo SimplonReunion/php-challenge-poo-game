@@ -11,5 +11,8 @@
         "psr-4":{
             "PublicVar\\":"src/"
         }
+    },
+    "require": {
+        "symfony/event-dispatcher": "^3.2"
     }
 }
